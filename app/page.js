@@ -10,6 +10,9 @@ import {
   Move,
   Image as ImageIcon,
   Check,
+  Share2,
+  Facebook,
+  Linkedin,
 } from "lucide-react";
 
 const TEMPLATE_WIDTH = 2160;
@@ -44,9 +47,8 @@ export default function EidCardGenerator() {
 
   const [name, setName] = useState("ABDULLAH SAFWAN TAIF");
   const [designation, setDesignation] = useState("Executive Officer");
-  const [greeting, setGreeting] = useState(
-    '" Wishing you a blessed Eid-ul-Fitr filled with peace, happiness, and success. Warmest greetings to you and your family. "',
-  );
+  const greeting =
+    '" Wishing you a blessed Eid-ul-Fitr filled with peace, happiness, and success. Warmest greetings to you and your family. "';
 
   const canvasRef = useRef(null);
 
@@ -188,11 +190,71 @@ export default function EidCardGenerator() {
     link.click();
   };
 
+  const handlePlatformShare = (platform) => {
+    handleDownload();
+    const platformName = platform === "facebook" ? "Facebook" : "LinkedIn";
+    const url =
+      platform === "facebook"
+        ? "https://www.facebook.com/"
+        : "https://www.linkedin.com/feed/";
+
+    setTimeout(() => {
+      alert(
+        `Your card has been downloaded!\n\nWe will now open ${platformName}. Upload the downloaded image to your new post.`,
+      );
+      window.open(url, "_blank");
+    }, 100);
+  };
+
+  const handleShare = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    if (navigator.share) {
+      canvas.toBlob(
+        async (blob) => {
+          if (!blob) return;
+          const file = new File(
+            [blob],
+            `Eid-Greetings-${name.replace(/\s+/g, "-")}.jpg`,
+            { type: "image/jpeg" },
+          );
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: "Eid Greetings",
+                text: "Wishing you a blessed Eid-ul-Fitr!",
+              });
+            } catch (err) {
+              if (err.name === "AbortError") {
+                console.log("Share canceled");
+              } else {
+                console.error("Share failed:", err);
+              }
+            }
+          } else {
+            alert(
+              "Your browser doesn't support sharing this image directly. Please download it first.",
+            );
+          }
+        },
+        "image/jpeg",
+        0.95,
+      );
+    } else {
+      alert(
+        "Your browser doesn't support direct sharing. Please download the image first.",
+      );
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral-100 flex flex-col md:flex-row font-sans">
       {/* Sidebar Controls */}
       <div className="w-full md:w-80 lg:w-96 bg-white border-r border-neutral-200 overflow-y-auto flex-shrink-0 flex flex-col hidden-scrollbar h-fit md:h-screen">
-        <div className="px-6 py-3 border-b border-neutral-100 bg-white sticky top-0 z-10">
+        <div className="p-6 border-b border-neutral-100 bg-white sticky top-0 z-10">
           <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
             Betopia Eid Card
           </h1>
@@ -201,7 +263,7 @@ export default function EidCardGenerator() {
           </p>
         </div>
 
-        <div className="px-6 py-3 space-y-6 flex-grow">
+        <div className="p-6 space-y-6 flex-grow">
           {/* Main Inputs */}
           <div className="space-y-4">
             <div>
@@ -227,18 +289,6 @@ export default function EidCardGenerator() {
                 onChange={(e) => setDesignation(e.target.value)}
                 className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow outline-none text-neutral-900"
                 placeholder="Ex. Executive Officer"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Greeting Text
-              </label>
-              <textarea
-                value={greeting}
-                onChange={(e) => setGreeting(e.target.value)}
-                className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow outline-none text-neutral-900 min-h-[100px] resize-y"
-                placeholder="Ex. Wishing you a blessed Eid-ul-Fitr..."
               />
             </div>
 
@@ -341,26 +391,53 @@ export default function EidCardGenerator() {
             />
             {/* Placeholder state if needed, though canvas does load right away */}
             {!photoSrc && (
-              <div className="absolute top-12 right-12 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-neutral-100 flex items-center gap-2 animate-bounce">
+              <div className="absolute top-8 left-8 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-neutral-100 flex items-center gap-2 animate-bounce">
                 <span className="relative flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
                 </span>
                 <span className="text-sm font-medium text-neutral-700">
-                  Awaiting Photo...
+                  Upload Your Photo...
                 </span>
               </div>
             )}
           </div>
 
-          <div className="mt-8 w-full max-w-sm mx-auto flex-shrink-0">
+          <div className="mt-8 w-full max-w-lg mx-auto shrink-0 flex items-center justify-between gap-4">
             <button
               onClick={handleDownload}
-              className="w-full py-4 px-6 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-medium rounded-md transition-all flex items-center justify-center gap-2 group cursor-pointer"
+              className="flex-1 py-3 px-6 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-medium rounded-md transition-all flex items-center justify-center gap-2 group cursor-pointer shadow-sm"
             >
               <Download className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
-              Download High-Res Card
+              <span className="hidden sm:inline">Download High-Res Card</span>
+              <span className="sm:hidden">Download</span>
             </button>
+
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={() => handlePlatformShare("facebook")}
+                className="w-12 h-12 bg-[#1877F2] hover:bg-[#166fe5] active:bg-[#1455b7] text-white font-medium rounded-md transition-all flex items-center justify-center group cursor-pointer shadow-sm"
+                title="Share on Facebook"
+              >
+                <Facebook className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
+              </button>
+
+              <button
+                onClick={() => handlePlatformShare("linkedin")}
+                className="w-12 h-12 bg-[#0A66C2] hover:bg-[#004182] active:bg-[#00315c] text-white font-medium rounded-md transition-all flex items-center justify-center group cursor-pointer shadow-sm"
+                title="Share on LinkedIn"
+              >
+                <Linkedin className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
+              </button>
+
+              <button
+                onClick={handleShare}
+                className="w-12 h-12 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-medium rounded-md transition-all flex items-center justify-center group cursor-pointer shadow-sm"
+                title="More sharing options"
+              >
+                <Share2 className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
