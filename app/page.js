@@ -1,65 +1,369 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useRef, useEffect, useCallback } from "react";
+import Image from "next/image";
+import Cropper from "react-easy-crop";
+import {
+  Download,
+  Upload,
+  Type,
+  Move,
+  Image as ImageIcon,
+  Check,
+} from "lucide-react";
+
+const TEMPLATE_WIDTH = 2160;
+const TEMPLATE_HEIGHT = 2160;
+const TEMPLATE_SRC = "/Template bg.jpg";
+
+const CONFIG = {
+  circleX: 535,
+  circleY: 740,
+  circleRadius: 395,
+  nameX: 1040,
+  nameY: 860,
+  nameSize: 62,
+  nameColor: "#000000",
+  desigX: 1040,
+  desigY: 940,
+  desigSize: 55,
+  desigColor: "#e67623",
+  greetingX: 1080,
+  greetingY: 1750,
+  greetingSize: 48,
+  greetingColor: "#000000",
+  greetingLineHeight: 70,
+  greetingMaxWidth: 1600,
+};
+
+export default function EidCardGenerator() {
+  const [photoSrc, setPhotoSrc] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+  const [name, setName] = useState("ABDULLAH SAFWAN TAIF");
+  const [designation, setDesignation] = useState("Executive Officer");
+  const [greeting, setGreeting] = useState(
+    '" Wishing you a blessed Eid-ul-Fitr filled with peace, happiness, and success. Warmest greetings to you and your family. "',
+  );
+
+  const canvasRef = useRef(null);
+
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const reader = new FileReader();
+      reader.addEventListener("load", () => setPhotoSrc(reader.result));
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  // Debounced render
+  useEffect(() => {
+    let timeoutId;
+    const renderCard = async () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+
+      // Load template
+      const templateImg = new window.Image();
+      templateImg.src = TEMPLATE_SRC;
+      await new Promise((resolve) => {
+        templateImg.onload = resolve;
+      });
+
+      ctx.clearRect(0, 0, TEMPLATE_WIDTH, TEMPLATE_HEIGHT);
+      ctx.drawImage(templateImg, 0, 0, TEMPLATE_WIDTH, TEMPLATE_HEIGHT);
+
+      // Draw photo if cropped
+      if (photoSrc && croppedAreaPixels) {
+        const photoImg = new window.Image();
+        photoImg.src = photoSrc;
+        await new Promise((resolve) => {
+          photoImg.onload = resolve;
+        });
+
+        const { x, y, width, height } = croppedAreaPixels;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(
+          CONFIG.circleX,
+          CONFIG.circleY,
+          CONFIG.circleRadius,
+          0,
+          Math.PI * 2,
+          true,
+        );
+        ctx.closePath();
+        ctx.clip();
+
+        // Target draw area is a square bounding the circle
+        ctx.drawImage(
+          photoImg,
+          x,
+          y,
+          width,
+          height,
+          CONFIG.circleX - CONFIG.circleRadius,
+          CONFIG.circleY - CONFIG.circleRadius,
+          CONFIG.circleRadius * 2,
+          CONFIG.circleRadius * 2,
+        );
+        ctx.restore();
+
+        // Draw a white border around the circular image
+        ctx.beginPath();
+        ctx.arc(
+          CONFIG.circleX,
+          CONFIG.circleY,
+          CONFIG.circleRadius,
+          0,
+          Math.PI * 2,
+          true,
+        );
+        ctx.closePath();
+        ctx.lineWidth = 15;
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.stroke();
+      }
+
+      // Draw Name
+      ctx.fillStyle = CONFIG.nameColor;
+      ctx.font = `bold ${CONFIG.nameSize}px Inter, "Segoe UI", sans-serif`;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      if (name) ctx.fillText(name.toUpperCase(), CONFIG.nameX, CONFIG.nameY);
+
+      // Draw Designation
+      ctx.fillStyle = CONFIG.desigColor;
+      ctx.font = `500 ${CONFIG.desigSize}px Inter, "Segoe UI", sans-serif`;
+      if (designation) ctx.fillText(designation, CONFIG.desigX, CONFIG.desigY);
+
+      // Draw Greeting (wrapped text and centered text)
+      if (greeting) {
+        ctx.fillStyle = CONFIG.greetingColor;
+        ctx.font = `500 ${CONFIG.greetingSize}px Inter, "Segoe UI", sans-serif`;
+        ctx.textAlign = "center";
+
+        const words = greeting.split(" ");
+        let line = "";
+        let yPos = CONFIG.greetingY;
+
+        for (let n = 0; n < words.length; n++) {
+          const testLine = line + words[n] + " ";
+          const metrics = ctx.measureText(testLine);
+          const testWidth = metrics.width;
+          if (testWidth > CONFIG.greetingMaxWidth && n > 0) {
+            ctx.fillText(line, CONFIG.greetingX, yPos);
+            line = words[n] + " ";
+            yPos += CONFIG.greetingLineHeight;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, CONFIG.greetingX, yPos);
+      }
+    };
+
+    timeoutId = setTimeout(() => {
+      renderCard();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [photoSrc, croppedAreaPixels, name, designation, greeting]);
+
+  const handleDownload = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+    const link = document.createElement("a");
+    link.download = `Eid-Greetings-${name.replace(/\s+/g, "-")}.jpg`;
+    link.href = dataUrl;
+    link.click();
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
+    <div className="min-h-screen bg-neutral-100 flex flex-col md:flex-row font-sans">
+      {/* Sidebar Controls */}
+      <div className="w-full md:w-80 lg:w-96 bg-white border-r border-neutral-200 overflow-y-auto flex-shrink-0 flex flex-col hidden-scrollbar h-fit md:h-screen">
+        <div className="px-6 py-3 border-b border-neutral-100 bg-white sticky top-0 z-10">
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
+            Betopia Eid Card
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-sm text-neutral-500">
+            Create customized greetings cards instantly.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="px-6 py-3 space-y-6 flex-grow">
+          {/* Main Inputs */}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Employee Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow outline-none text-neutral-900"
+                placeholder="Ex. ABDULLAH SAFWAN TAIF"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Designation
+              </label>
+              <input
+                type="text"
+                value={designation}
+                onChange={(e) => setDesignation(e.target.value)}
+                className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow outline-none text-neutral-900"
+                placeholder="Ex. Executive Officer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Greeting Text
+              </label>
+              <textarea
+                value={greeting}
+                onChange={(e) => setGreeting(e.target.value)}
+                className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow outline-none text-neutral-900 min-h-[100px] resize-y"
+                placeholder="Ex. Wishing you a blessed Eid-ul-Fitr..."
+              />
+            </div>
+
+            {!photoSrc && (
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Photo Upload
+                </label>
+                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-neutral-300 border-dashed rounded-lg hover:border-orange-400 transition-colors bg-neutral-50 relative">
+                  <div className="space-y-1 text-center">
+                    <ImageIcon className="mx-auto h-12 w-12 text-neutral-400" />
+                    <div className="flex text-sm text-neutral-600 justify-center">
+                      <label
+                        htmlFor="file-upload"
+                        className="relative cursor-pointer bg-white rounded-md font-medium text-orange-600 hover:text-orange-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-orange-500 px-2 py-1"
+                      >
+                        <span>Upload a file</span>
+                        <input
+                          id="file-upload"
+                          name="file-upload"
+                          type="file"
+                          className="sr-only"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                        />
+                      </label>
+                    </div>
+                    <p className="text-xs text-neutral-500">
+                      PNG, JPG up to 10MB
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Photo Cropper UI */}
+          {photoSrc && (
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wider flex items-center gap-2">
+                <Move className="w-4 h-4 text-orange-500" /> Adjust Photo
+                Position
+              </h2>
+              <div className="relative w-full h-64 bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800 shadow-inner">
+                <Cropper
+                  image={photoSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  cropShape="round"
+                  showGrid={false}
+                  onCropChange={setCrop}
+                  onCropComplete={onCropComplete}
+                  onZoomChange={setZoom}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-500 mb-2 flex justify-between">
+                  <span>Zoom Level</span>
+                  <span>{Number(zoom).toFixed(1)}x</span>
+                </label>
+                <input
+                  type="range"
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  aria-labelledby="Zoom"
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                />
+              </div>
+            </div>
+          )}
         </div>
-      </main>
+
+        {/* Download Button moved to canvas area */}
+      </div>
+
+      {/* Preview Canvas Area */}
+      <div className="flex-1 overflow-hidden relative bg-[#f8f9fa] flex items-center justify-center p-8 bg-grid-pattern">
+        {/* Subtle grid pattern background for preview area */}
+        <div
+          className="absolute inset-0 z-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        ></div>
+
+        <div className="relative z-10 w-full max-w-2xl h-full flex flex-col items-center justify-center pb-8 overflow-y-auto hidden-scrollbar">
+          <div className="relative mx-auto w-full aspect-square bg-white shadow-sm rounded-xl overflow-hidden ring-1 ring-neutral-200 transition-all duration-300">
+            {/* The actual off-screen canvas rendering high res */}
+            <canvas
+              ref={canvasRef}
+              width={TEMPLATE_WIDTH}
+              height={TEMPLATE_HEIGHT}
+              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+            />
+            {/* Placeholder state if needed, though canvas does load right away */}
+            {!photoSrc && (
+              <div className="absolute top-12 right-12 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-neutral-100 flex items-center gap-2 animate-bounce">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                </span>
+                <span className="text-sm font-medium text-neutral-700">
+                  Awaiting Photo...
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-8 w-full max-w-sm mx-auto flex-shrink-0">
+            <button
+              onClick={handleDownload}
+              className="w-full py-4 px-6 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-medium rounded-md transition-all flex items-center justify-center gap-2 group cursor-pointer"
+            >
+              <Download className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
+              Download High-Res Card
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
