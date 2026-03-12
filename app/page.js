@@ -11,9 +11,6 @@ import {
   Image as ImageIcon,
   Check,
   Share2,
-  Facebook,
-  Linkedin,
-  Loader2,
 } from "lucide-react";
 
 const TEMPLATE_WIDTH = 2160;
@@ -45,7 +42,6 @@ export default function EidCardGenerator() {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   const [name, setName] = useState("ABDULLAH SAFWAN TAIF");
   const [designation, setDesignation] = useState("Executive Officer");
@@ -190,41 +186,6 @@ export default function EidCardGenerator() {
     link.download = `Eid-Greetings-${name.replace(/\s+/g, "-")}.jpg`;
     link.href = dataUrl;
     link.click();
-  };
-
-  const handlePlatformShare = async (platform) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    setIsUploading(true);
-    try {
-      const imageData = canvas.toDataURL("image/jpeg", 0.9);
-      
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imageData }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Upload failed");
-
-      const publicUrl = encodeURIComponent(data.url);
-      let shareUrl = "";
-
-      if (platform === "facebook") {
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${publicUrl}`;
-      } else if (platform === "linkedin") {
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${publicUrl}`;
-      }
-
-      window.open(shareUrl, "_blank", "width=600,height=400");
-    } catch (error) {
-      console.error("Sharing error:", error);
-      alert("Failed to prepare share link. Please try downloading instead.");
-    } finally {
-      setIsUploading(false);
-    }
   };
 
   const handleShare = async () => {
@@ -434,41 +395,14 @@ export default function EidCardGenerator() {
               <span className="sm:hidden">Download</span>
             </button>
 
-            <div className="flex gap-2 shrink-0">
-              <button
-                onClick={() => handlePlatformShare("facebook")}
-                disabled={isUploading}
-                className="w-12 h-12 bg-[#1877F2] hover:bg-[#166fe5] active:bg-[#1455b7] text-white font-medium rounded-md transition-all flex items-center justify-center group cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Share on Facebook"
-              >
-                {isUploading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Facebook className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
-                )}
-              </button>
-
-              <button
-                onClick={() => handlePlatformShare("linkedin")}
-                disabled={isUploading}
-                className="w-12 h-12 bg-[#0A66C2] hover:bg-[#004182] active:bg-[#00315c] text-white font-medium rounded-md transition-all flex items-center justify-center group cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Share on LinkedIn"
-              >
-                {isUploading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Linkedin className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
-                )}
-              </button>
-
-              <button
-                onClick={handleShare}
-                className="w-12 h-12 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-medium rounded-md transition-all flex items-center justify-center group cursor-pointer shadow-sm"
-                title="More sharing options"
-              >
-                <Share2 className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
-              </button>
-            </div>
+            <button
+              onClick={handleShare}
+              className="py-3 px-6 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-medium rounded-md transition-all flex items-center justify-center gap-2 group cursor-pointer shadow-sm shrink-0"
+              title="Share"
+            >
+              <span>Share</span>
+              <Share2 className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
+            </button>
           </div>
         </div>
       </div>
