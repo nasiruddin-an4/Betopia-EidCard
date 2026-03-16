@@ -18,23 +18,18 @@ const TEMPLATE_HEIGHT = 2160;
 const TEMPLATE_SRC = "/Template bg.jpg";
 
 const CONFIG = {
-  circleX: 535,
-  circleY: 740,
-  circleRadius: 395,
-  nameX: 1040,
-  nameY: 860,
-  nameSize: 62,
-  nameColor: "#000000",
-  desigX: 1040,
-  desigY: 940,
-  desigSize: 55,
-  desigColor: "#e67623",
-  greetingX: 1080,
-  greetingY: 1750,
-  greetingSize: 48,
-  greetingColor: "#000000",
-  greetingLineHeight: 70,
-  greetingMaxWidth: 1600,
+  ovalX: 529,
+  ovalY: 985,
+  ovalRadiusX: 296,
+  ovalRadiusY: 395,
+  nameX: 200,
+  nameY: 1520,
+  nameSize: 55,
+  nameColor: "#FFFFFF",
+  desigX: 200,
+  desigY: 1580,
+  desigSize: 45,
+  desigColor: "#FFFFFF",
 };
 
 export default function EidCardGenerator() {
@@ -43,11 +38,8 @@ export default function EidCardGenerator() {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
-  const [name, setName] = useState("ABDULLAH SAFWAN TAIF");
-  const [designation, setDesignation] = useState("Executive Officer");
-  const greeting =
-    '" Wishing you a blessed Eid-ul-Fitr filled with peace, happiness, and success. Warmest greetings to you and your family. "';
-
+  const [name, setName] = useState("Abdullah Shafwan Taif");
+  const [designation, setDesignation] = useState("senior executive");
   const canvasRef = useRef(null);
 
   const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
@@ -90,47 +82,42 @@ export default function EidCardGenerator() {
 
         const { x, y, width, height } = croppedAreaPixels;
 
+        const rx = CONFIG.ovalRadiusX;
+        const ry = CONFIG.ovalRadiusY;
+        const cx = CONFIG.ovalX;
+        const cy = CONFIG.ovalY;
+        const sh = ry - rx; // straight height half
+
         ctx.save();
         ctx.beginPath();
-        ctx.arc(
-          CONFIG.circleX,
-          CONFIG.circleY,
-          CONFIG.circleRadius,
-          0,
-          Math.PI * 2,
-          true,
-        );
+        ctx.arc(cx, cy - sh, rx, Math.PI, 0, false);
+        ctx.lineTo(cx + rx, cy + sh);
+        ctx.arc(cx, cy + sh, rx, 0, Math.PI, false);
+        ctx.lineTo(cx - rx, cy - sh);
         ctx.closePath();
         ctx.clip();
 
-        // Target draw area is a square bounding the circle
+        // Map the cropped 1:1 area to fill the bounding box of the ellipse
+        // Since croppedAreaPixels is square and ellipse is portrait, drawing it
+        // into the ellipse's bounding box will stretch it.
+        // We will adjust the aspect ratio in the cropper UI.
         ctx.drawImage(
           photoImg,
           x,
           y,
           width,
           height,
-          CONFIG.circleX - CONFIG.circleRadius,
-          CONFIG.circleY - CONFIG.circleRadius,
-          CONFIG.circleRadius * 2,
-          CONFIG.circleRadius * 2,
+          CONFIG.ovalX - CONFIG.ovalRadiusX,
+          CONFIG.ovalY - CONFIG.ovalRadiusY,
+          CONFIG.ovalRadiusX * 2,
+          CONFIG.ovalRadiusY * 2,
         );
-        ctx.restore();
-
-        // Draw a white border around the circular image
-        ctx.beginPath();
-        ctx.arc(
-          CONFIG.circleX,
-          CONFIG.circleY,
-          CONFIG.circleRadius,
-          0,
-          Math.PI * 2,
-          true,
-        );
-        ctx.closePath();
-        ctx.lineWidth = 15;
+        // Draw Border
         ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 8; // Border width for high-res output
         ctx.stroke();
+
+        ctx.restore();
       }
 
       // Draw Name
@@ -138,37 +125,12 @@ export default function EidCardGenerator() {
       ctx.font = `bold ${CONFIG.nameSize}px Inter, "Segoe UI", sans-serif`;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      if (name) ctx.fillText(name.toUpperCase(), CONFIG.nameX, CONFIG.nameY);
+      if (name) ctx.fillText(name, CONFIG.nameX, CONFIG.nameY);
 
       // Draw Designation
       ctx.fillStyle = CONFIG.desigColor;
       ctx.font = `500 ${CONFIG.desigSize}px Inter, "Segoe UI", sans-serif`;
       if (designation) ctx.fillText(designation, CONFIG.desigX, CONFIG.desigY);
-
-      // Draw Greeting (wrapped text and centered text)
-      if (greeting) {
-        ctx.fillStyle = CONFIG.greetingColor;
-        ctx.font = `500 ${CONFIG.greetingSize}px Inter, "Segoe UI", sans-serif`;
-        ctx.textAlign = "center";
-
-        const words = greeting.split(" ");
-        let line = "";
-        let yPos = CONFIG.greetingY;
-
-        for (let n = 0; n < words.length; n++) {
-          const testLine = line + words[n] + " ";
-          const metrics = ctx.measureText(testLine);
-          const testWidth = metrics.width;
-          if (testWidth > CONFIG.greetingMaxWidth && n > 0) {
-            ctx.fillText(line, CONFIG.greetingX, yPos);
-            line = words[n] + " ";
-            yPos += CONFIG.greetingLineHeight;
-          } else {
-            line = testLine;
-          }
-        }
-        ctx.fillText(line, CONFIG.greetingX, yPos);
-      }
     };
 
     timeoutId = setTimeout(() => {
@@ -176,7 +138,7 @@ export default function EidCardGenerator() {
     }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [photoSrc, croppedAreaPixels, name, designation, greeting]);
+  }, [photoSrc, croppedAreaPixels, name, designation]);
 
   const handleDownload = () => {
     const canvas = canvasRef.current;
@@ -257,7 +219,7 @@ export default function EidCardGenerator() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow outline-none text-neutral-900"
-                placeholder="Ex. ABDULLAH SAFWAN TAIF"
+                placeholder="Ex. Abdullah Shafwan Taif"
               />
             </div>
 
@@ -270,7 +232,7 @@ export default function EidCardGenerator() {
                 value={designation}
                 onChange={(e) => setDesignation(e.target.value)}
                 className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow outline-none text-neutral-900"
-                placeholder="Ex. Executive Officer"
+                placeholder="Ex. senior executive"
               />
             </div>
 
@@ -319,8 +281,8 @@ export default function EidCardGenerator() {
                   image={photoSrc}
                   crop={crop}
                   zoom={zoom}
-                  aspect={1}
-                  cropShape="round"
+                  aspect={CONFIG.ovalRadiusX / CONFIG.ovalRadiusY}
+                  cropShape="rect"
                   showGrid={false}
                   onCropChange={setCrop}
                   onCropComplete={onCropComplete}
