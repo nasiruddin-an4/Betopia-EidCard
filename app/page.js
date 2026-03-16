@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import Cropper from "react-easy-crop";
 import {
   Download,
@@ -140,9 +141,37 @@ export default function EidCardGenerator() {
     return () => clearTimeout(timeoutId);
   }, [photoSrc, croppedAreaPixels, name, designation]);
 
-  const handleDownload = () => {
+  useEffect(() => {
+    // Increment view count on load
+    const trackView = async () => {
+      try {
+        await fetch("/api/stats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "view" }),
+        });
+      } catch (err) {
+        console.error("Failed to track view:", err);
+      }
+    };
+    trackView();
+  }, []);
+
+  const handleDownload = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Track download first
+    try {
+      await fetch("/api/stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "download", name, designation }),
+      });
+    } catch (err) {
+      console.error("Failed to track download:", err);
+    }
+
     const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
     const link = document.createElement("a");
     link.download = `Eid-Greetings-${name.replace(/\s+/g, "-")}.jpg`;
@@ -366,6 +395,14 @@ export default function EidCardGenerator() {
               <Share2 className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
             </button>
           </div>
+        </div>
+        
+        {/* Statistics Dashboard Link */}
+        <div className="p-4 border-t border-neutral-100 bg-neutral-50/80 backdrop-blur-sm flex items-center justify-between text-xs text-neutral-500 mt-auto">
+          <span>&copy; {new Date().getFullYear()} Betopia</span>
+          <Link href="/stats" className="text-orange-600 hover:text-orange-500 font-semibold flex items-center gap-1 hover:underline cursor-pointer">
+            View Analytics &rarr;
+          </Link>
         </div>
       </div>
     </div>
