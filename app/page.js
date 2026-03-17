@@ -396,14 +396,6 @@ export default function EidCardGenerator() {
             </button>
           </div>
         </div>
-        
-        {/* Statistics Dashboard Link */}
-        <div className="p-4 border-t border-neutral-100 bg-neutral-50/80 backdrop-blur-sm flex items-center justify-between text-xs text-neutral-500 mt-auto">
-          <span>&copy; {new Date().getFullYear()} Betopia</span>
-          <Link href="/stats" className="text-orange-600 hover:text-orange-500 font-semibold flex items-center gap-1 hover:underline cursor-pointer">
-            View Analytics &rarr;
-          </Link>
-        </div>
       </div>
     </div>
   );
